@@ -1,0 +1,33 @@
+/* src/styles/tailwind.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Importar estilos personalizados */
+@import './fonts.css';
+@import './theme.css';
+
+/* Utilidades personalizadas */
+@layer components {
+  .card {
+    @apply bg-card border border-card-border rounded-lg p-4;
+  }
+  
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary-hover 
+           px-4 py-2 rounded-md font-medium transition-colors
+           focus:outline-none focus:ring-2 focus:ring-ring focus:ring-opacity-50;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary-hover 
+           px-4 py-2 rounded-md font-medium transition-colors
+           focus:outline-none focus:ring-2 focus:ring-ring focus:ring-opacity-50;
+  }
+  
+  .input-field {
+    @apply bg-input-background border border-input-border 
+           rounded-md px-3 py-2 focus:outline-none focus:ring-2 
+           focus:ring-ring focus:border-transparent;
+  }
+}

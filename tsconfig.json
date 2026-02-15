@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable", "ESNext"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true,  // ✅ Cambiado a true
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",  // ✅ CRÍTICO: Cambiado de "Node" a "bundler"
+    "allowImportingTsExtensions": true,  // ✅ AÑADIR: Permite imports sin extensión
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    // 🔑 Configuración de alias - CORREGIR
+    "baseUrl": ".",  // ✅ Cambiado de "src" a "."
+    "paths": {
+      "@/*": ["src/*"],  // ✅ Esto coincide con tu import @/app/routes
+      "@app/*": ["src/app/*"],
+      "@context/*": ["src/context/*"],
+      "@styles/*": ["src/styles/*"],
+      "@types/*": ["src/types/*"]
+    }
+  },
+  "include": ["src"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}
