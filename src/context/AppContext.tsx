@@ -1,9 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { Estudiante, Pago, Clase, EstadoPago } from '@/types';
 import { toast } from 'sonner';
-import { useAuth } from './AuthContext';
 
-// ✅ 1. API_URL definido AL INICIO, después de los imports
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 interface AppContextType {
@@ -23,16 +21,22 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+function getAuthHeaders(): HeadersInit {
+  const token = localStorage.getItem('auth_token');
+  return token ? { 'Authorization': `Token ${token}` } : {};
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [estudiantes, setEstudiantes] = useState<Estudiante[]>([]);
   const [pagos, setPagos] = useState<Pago[]>([]);
   const [clases, setClases] = useState<Clase[]>([]);
   const [cargando, setCargando] = useState(true);
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  
+  const token = localStorage.getItem('auth_token');
+  const isAuthenticated = !!token;
 
-  // Cargar datos desde Django API solo si está autenticado y ya verificó la sesión
   useEffect(() => {
-    if (!isAuthenticated || authLoading) {
+    if (!isAuthenticated) {
       setCargando(false);
       return;
     }
@@ -40,11 +44,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const fetchData = async () => {
       try {
         setCargando(true);
+        const headers = getAuthHeaders();
         
-        // ✅ 2. TODOS los fetch ahora usan API_URL
-        const estudiantesResponse = await fetch(`${API_URL}/estudiantes/`, {
-          credentials: 'include',
-        });
+        const estudiantesResponse = await fetch(`${API_URL}/estudiantes/`, { headers });
+        
         if (!estudiantesResponse.ok) {
           if (estudiantesResponse.status === 403 || estudiantesResponse.status === 401) {
             setCargando(false);
@@ -52,6 +55,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
           throw new Error('Error al cargar estudiantes');
         }
+        
         const estudiantesData = await estudiantesResponse.json();
         
         const transformedEstudiantes = estudiantesData.map((estudiante: any) => ({
@@ -68,10 +72,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         
         setEstudiantes(transformedEstudiantes);
 
-        // Cargar pagos
-        const pagosResponse = await fetch(`${API_URL}/pagos/`, {
-          credentials: 'include',
-        });
+        const pagosResponse = await fetch(`${API_URL}/pagos/`, { headers });
         if (pagosResponse.ok) {
           const pagosData = await pagosResponse.json();
           const transformedPagos = pagosData.map((pago: any) => ({
@@ -85,10 +86,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setPagos(transformedPagos.filter((p: Pago) => p.estudianteId));
         }
 
-        // Cargar clases
-        const clasesResponse = await fetch(`${API_URL}/clases/`, {
-          credentials: 'include',
-        });
+        const clasesResponse = await fetch(`${API_URL}/clases/`, { headers });
         if (clasesResponse.ok) {
           const clasesData = await clasesResponse.json();
           const transformedClases = clasesData.map((claseItem: any) => ({
@@ -114,16 +112,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
 
     fetchData();
-  }, [isAuthenticated, authLoading]);
+  }, [isAuthenticated]);
 
   const agregarEstudiante = async (estudianteData: Omit<Estudiante, 'id'>) => {
     try {
+      const headers = { 'Content-Type': 'application/json', ...getAuthHeaders() };
+      
       const response = await fetch(`${API_URL}/estudiantes/`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
+        headers,
         body: JSON.stringify({
           nombre: estudianteData.nombre,
           telefono: estudianteData.telefono || '',
@@ -165,12 +162,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const agregarPago = async (pagoData: Omit<Pago, 'id'>) => {
     try {
+      const headers = { 'Content-Type': 'application/json', ...getAuthHeaders() };
+      
       const response = await fetch(`${API_URL}/pagos/`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
+        headers,
         body: JSON.stringify({
           estudiante: parseInt(pagoData.estudianteId),
           monto: pagoData.monto,
@@ -196,10 +192,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         metodo: data.metodo
       };
 
-      // Agregar pago a la lista global
       setPagos(prev => [...prev, nuevoPago]);
 
-      // Actualizar estado de pago del estudiante si corresponde
       const totalPagado = [...pagos, nuevoPago]
         .filter(p => p.estudianteId === pagoData.estudianteId)
         .reduce((sum, p) => sum + p.montoPagado, 0);
@@ -213,16 +207,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
           nuevoEstado = 'parcial';
         }
         
-        // ✅ Actualizar en el backend (también usa API_URL)
         await fetch(`${API_URL}/estudiantes/${pagoData.estudianteId}/`, {
           method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify({
-            estado_pago: nuevoEstado
-          }),
+          headers,
+          body: JSON.stringify({ estado_pago: nuevoEstado }),
         });
         
         setEstudiantes(prev => prev.map(e => 
@@ -243,12 +231,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const agregarClase = async (claseData: Omit<Clase, 'id'>) => {
     try {
+      const headers = { 'Content-Type': 'application/json', ...getAuthHeaders() };
+      
       const response = await fetch(`${API_URL}/clases/`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
+        headers,
         body: JSON.stringify({
           estudiante: parseInt(claseData.estudianteId),
           fecha: claseData.fecha,
@@ -288,12 +275,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const editarEstudiante = async (estudianteId: string, updates: Partial<Estudiante>) => {
     try {
+      const headers = { 'Content-Type': 'application/json', ...getAuthHeaders() };
+      
       const response = await fetch(`${API_URL}/estudiantes/${estudianteId}/`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
+        headers,
         body: JSON.stringify({
           ...(updates.nombre && { nombre: updates.nombre }),
           ...(updates.telefono && { telefono: updates.telefono }),
@@ -324,9 +310,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const eliminarEstudiante = async (estudianteId: string) => {
     try {
+      const headers = getAuthHeaders();
+      
       const response = await fetch(`${API_URL}/estudiantes/${estudianteId}/`, {
         method: 'DELETE',
-        credentials: 'include',
+        headers,
       });
 
       if (!response.ok) {
@@ -360,9 +348,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const eliminarClase = async (claseId: string) => {
     try {
+      const headers = getAuthHeaders();
+      
       const response = await fetch(`${API_URL}/clases/${claseId}/`, {
         method: 'DELETE',
-        credentials: 'include',
+        headers,
       });
 
       if (!response.ok) {
@@ -380,12 +370,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const editarClase = async (claseId: string, updates: Partial<Clase>) => {
     try {
+      const headers = { 'Content-Type': 'application/json', ...getAuthHeaders() };
+      
       const response = await fetch(`${API_URL}/clases/${claseId}/`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
+        headers,
         body: JSON.stringify({
           ...(updates.fecha && { fecha: updates.fecha }),
           ...(updates.duracion && { duracion: updates.duracion }),
