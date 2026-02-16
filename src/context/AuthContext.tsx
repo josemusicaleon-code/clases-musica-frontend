@@ -14,14 +14,12 @@ interface AuthContextType {
   isLoading: boolean;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
-  token: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('auth_token'));
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -31,7 +29,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (storedToken && storedUser) {
       try {
         setUser(JSON.parse(storedUser));
-        setToken(storedToken);
       } catch {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('auth_user');
@@ -42,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_URL}/auth/token/`, {
+      const response = await fetch(`${API_URL}/auth/login/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -52,19 +49,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (response.ok) {
         const data = await response.json();
-        const authToken = data.token;
         
-        localStorage.setItem('auth_token', authToken);
-        localStorage.setItem('auth_user', JSON.stringify({ username, id: 1 }));
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('auth_user', JSON.stringify(data.user));
         
-        setToken(authToken);
-        setUser({ username, id: 1 });
-        
-        toast.success(`Bienvenido, ${username}`);
+        setUser(data.user);
+        toast.success(`Bienvenido, ${data.user.username}`);
         return true;
       } else {
         const error = await response.json();
-        toast.error(error.non_field_errors?.[0] || 'Credenciales inválidas');
+        toast.error(error.error || 'Credenciales inválidas');
         return false;
       }
     } catch (error) {
@@ -75,22 +69,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
-    setToken(null);
-    setUser(null);
-    toast.success('Sesión cerrada');
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        await fetch(`${API_URL}/auth/logout/`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Token ${token}`,
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Error en logout:', error);
+    } finally {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
+      setUser(null);
+      toast.success('Sesión cerrada');
+    }
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        isAuthenticated: !!token,
+        isAuthenticated: !!localStorage.getItem('auth_token'),
         isLoading,
         login,
         logout,
-        token,
       }}
     >
       {children}
