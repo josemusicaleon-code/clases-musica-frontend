@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 export function DetalleEstudiante() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { estudiantes, pagos, clases, eliminarEstudiante, editarClase, eliminarClase } = useApp();
+  const { estudiantes, pagos, clases, eliminarEstudiante, editarClase, eliminarClase, editarEstudiante } = useApp();
 
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
@@ -20,6 +20,8 @@ export function DetalleEstudiante() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editingClase, setEditingClase] = useState<string | null>(null);
   const [editObservacion, setEditObservacion] = useState('');
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editName, setEditName] = useState('');
 
   const estudiante = estudiantes.find(e => e.id === id);
 
@@ -98,6 +100,29 @@ export function DetalleEstudiante() {
     }
   };
 
+  const handleStartEditName = () => {
+    setEditName(estudiante.nombre);
+    setIsEditingName(true);
+  };
+
+  const handleSaveName = async () => {
+    if (!editName.trim() || editName === estudiante.nombre) {
+      setIsEditingName(false);
+      return;
+    }
+    try {
+      await editarEstudiante(estudiante.id, { nombre: editName.trim() });
+      setIsEditingName(false);
+    } catch (error) {
+      console.error('Error al guardar nombre:', error);
+    }
+  };
+
+  const handleCancelEditName = () => {
+    setIsEditingName(false);
+    setEditName('');
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
@@ -110,7 +135,44 @@ export function DetalleEstudiante() {
           Volver a Agenda
         </button>
         <div className="flex items-center justify-between">
-          <h2 className="text-3xl font-bold text-[#D9C3AB]">{estudiante.nombre}</h2>
+          <div className="flex items-center gap-3">
+            {isEditingName ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="px-3 py-2 bg-black/40 border border-[#F16001]/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F16001] text-[#D9C3AB] text-3xl font-bold w-64"
+                  autoFocus
+                />
+                <button
+                  onClick={handleSaveName}
+                  className="p-2 bg-green-600/80 text-white rounded-lg hover:bg-green-600 transition-colors"
+                  title="Guardar"
+                >
+                  <Check className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={handleCancelEditName}
+                  className="p-2 bg-gray-600/80 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                  title="Cancelar"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-3xl font-bold text-[#D9C3AB]">{estudiante.nombre}</h2>
+                <button
+                  onClick={handleStartEditName}
+                  className="p-2 text-[#D9C3AB]/60 hover:text-[#F16001] transition-colors"
+                  title="Editar nombre"
+                >
+                  <Pencil className="w-5 h-5" />
+                </button>
+              </>
+            )}
+          </div>
           <div className="flex items-center gap-3">
             <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[estudiante.estadoPago]}`}>
               {statusLabels[estudiante.estadoPago]}

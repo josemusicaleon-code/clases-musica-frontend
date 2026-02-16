@@ -35,7 +35,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setCargando(true);
         
         // ✅ 2. TODOS los fetch ahora usan API_URL
-        const estudiantesResponse = await fetch(`${API_URL}/estudiantes/`);
+        const estudiantesResponse = await fetch(`${API_URL}/estudiantes/`, {
+          credentials: 'include',
+        });
         if (!estudiantesResponse.ok) {
           throw new Error('Error al cargar estudiantes');
         }
@@ -56,7 +58,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setEstudiantes(transformedEstudiantes);
 
         // Cargar pagos
-        const pagosResponse = await fetch(`${API_URL}/pagos/`);
+        const pagosResponse = await fetch(`${API_URL}/pagos/`, {
+          credentials: 'include',
+        });
         if (pagosResponse.ok) {
           const pagosData = await pagosResponse.json();
           const transformedPagos = pagosData.map((pago: any) => ({
@@ -71,7 +75,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
 
         // Cargar clases
-        const clasesResponse = await fetch(`${API_URL}/clases/`);
+        const clasesResponse = await fetch(`${API_URL}/clases/`, {
+          credentials: 'include',
+        });
         if (clasesResponse.ok) {
           const clasesData = await clasesResponse.json();
           const transformedClases = clasesData.map((claseItem: any) => ({
@@ -104,6 +110,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           nombre: estudianteData.nombre,
           telefono: estudianteData.telefono || '',
@@ -150,6 +157,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           estudiante: parseInt(pagoData.estudianteId),
           monto: pagoData.monto,
@@ -198,6 +206,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           headers: {
             'Content-Type': 'application/json',
           },
+          credentials: 'include',
           body: JSON.stringify({
             estado_pago: nuevoEstado
           }),
@@ -226,6 +235,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           estudiante: parseInt(claseData.estudianteId),
           fecha: claseData.fecha,
@@ -270,6 +280,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           ...(updates.nombre && { nombre: updates.nombre }),
           ...(updates.telefono && { telefono: updates.telefono }),
@@ -302,6 +313,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const response = await fetch(`${API_URL}/estudiantes/${estudianteId}/`, {
         method: 'DELETE',
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -337,6 +349,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const response = await fetch(`${API_URL}/clases/${claseId}/`, {
         method: 'DELETE',
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -359,6 +372,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           ...(updates.fecha && { fecha: updates.fecha }),
           ...(updates.duracion && { duracion: updates.duracion }),
