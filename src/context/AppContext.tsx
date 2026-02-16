@@ -21,7 +21,7 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-function getAuthHeaders(): HeadersInit {
+function getHeaders(): HeadersInit {
   const token = localStorage.getItem('auth_token');
   return token ? { 'Authorization': `Token ${token}` } : {};
 }
@@ -32,8 +32,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [clases, setClases] = useState<Clase[]>([]);
   const [cargando, setCargando] = useState(true);
   
-  const token = localStorage.getItem('auth_token');
+  const [token, setToken] = useState(() => localStorage.getItem('auth_token'));
   const isAuthenticated = !!token;
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setToken(localStorage.getItem('auth_token'));
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -44,7 +53,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const fetchData = async () => {
       try {
         setCargando(true);
-        const headers = getAuthHeaders();
+        const currentToken = localStorage.getItem('auth_token');
+        const headers = currentToken ? { 'Authorization': `Token ${currentToken}` } : {};
         
         const estudiantesResponse = await fetch(`${API_URL}/estudiantes/`, { headers });
         
@@ -112,15 +122,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
 
     fetchData();
-  }, [isAuthenticated]);
+  }, [token]);
+
+  const getHeaders = (): HeadersInit => {
+    const t = localStorage.getItem('auth_token');
+    return t ? { 'Authorization': `Token ${t}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+  };
+
+  const getHeadersNoContent = (): HeadersInit => {
+    const t = localStorage.getItem('auth_token');
+    return t ? { 'Authorization': `Token ${t}` } : {};
+  };
 
   const agregarEstudiante = async (estudianteData: Omit<Estudiante, 'id'>) => {
     try {
-      const headers = { 'Content-Type': 'application/json', ...getAuthHeaders() };
-      
       const response = await fetch(`${API_URL}/estudiantes/`, {
         method: 'POST',
-        headers,
+        headers: getHeaders(),
         body: JSON.stringify({
           nombre: estudianteData.nombre,
           telefono: estudianteData.telefono || '',
@@ -162,7 +180,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const agregarPago = async (pagoData: Omit<Pago, 'id'>) => {
     try {
-      const headers = { 'Content-Type': 'application/json', ...getAuthHeaders() };
+      const headers = { 'Content-Type': 'application/json', ...getHeaders() };
       
       const response = await fetch(`${API_URL}/pagos/`, {
         method: 'POST',
@@ -231,7 +249,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const agregarClase = async (claseData: Omit<Clase, 'id'>) => {
     try {
-      const headers = { 'Content-Type': 'application/json', ...getAuthHeaders() };
+      const headers = { 'Content-Type': 'application/json', ...getHeaders() };
       
       const response = await fetch(`${API_URL}/clases/`, {
         method: 'POST',
@@ -275,7 +293,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const editarEstudiante = async (estudianteId: string, updates: Partial<Estudiante>) => {
     try {
-      const headers = { 'Content-Type': 'application/json', ...getAuthHeaders() };
+      const headers = { 'Content-Type': 'application/json', ...getHeaders() };
       
       const response = await fetch(`${API_URL}/estudiantes/${estudianteId}/`, {
         method: 'PATCH',
@@ -310,7 +328,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const eliminarEstudiante = async (estudianteId: string) => {
     try {
-      const headers = getAuthHeaders();
+      const headers = getHeadersNoContent();
       
       const response = await fetch(`${API_URL}/estudiantes/${estudianteId}/`, {
         method: 'DELETE',
@@ -348,7 +366,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const eliminarClase = async (claseId: string) => {
     try {
-      const headers = getAuthHeaders();
+      const headers = getHeadersNoContent();
       
       const response = await fetch(`${API_URL}/clases/${claseId}/`, {
         method: 'DELETE',
@@ -370,7 +388,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const editarClase = async (claseId: string, updates: Partial<Clase>) => {
     try {
-      const headers = { 'Content-Type': 'application/json', ...getAuthHeaders() };
+      const headers = { 'Content-Type': 'application/json', ...getHeaders() };
       
       const response = await fetch(`${API_URL}/clases/${claseId}/`, {
         method: 'PATCH',
