@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { Estudiante, Pago, Clase, EstadoPago } from '@/types';
 import { toast } from 'sonner';
+import { useAuth } from './AuthContext';
 
 // ✅ 1. API_URL definido AL INICIO, después de los imports
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
@@ -27,9 +28,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [pagos, setPagos] = useState<Pago[]>([]);
   const [clases, setClases] = useState<Clase[]>([]);
   const [cargando, setCargando] = useState(true);
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
 
-  // Cargar datos desde Django API
+  // Cargar datos desde Django API solo si está autenticado y ya verificó la sesión
   useEffect(() => {
+    if (!isAuthenticated || authLoading) {
+      setCargando(false);
+      return;
+    }
+
     const fetchData = async () => {
       try {
         setCargando(true);
@@ -39,6 +46,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
           credentials: 'include',
         });
         if (!estudiantesResponse.ok) {
+          if (estudiantesResponse.status === 403 || estudiantesResponse.status === 401) {
+            setCargando(false);
+            return;
+          }
           throw new Error('Error al cargar estudiantes');
         }
         const estudiantesData = await estudiantesResponse.json();
@@ -94,14 +105,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       } catch (error) {
         console.error('Error cargando datos:', error);
-        toast.error('Error al cargar los datos');
+        if (isAuthenticated) {
+          toast.error('Error al cargar los datos');
+        }
       } finally {
         setCargando(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [isAuthenticated, authLoading]);
 
   const agregarEstudiante = async (estudianteData: Omit<Estudiante, 'id'>) => {
     try {
