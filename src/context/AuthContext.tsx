@@ -21,6 +21,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('auth_token'));
 
   useEffect(() => {
     const storedToken = localStorage.getItem('auth_token');
@@ -29,6 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (storedToken && storedUser) {
       try {
         setUser(JSON.parse(storedUser));
+        setToken(storedToken);
       } catch {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('auth_user');
@@ -53,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('auth_token', data.token);
         localStorage.setItem('auth_user', JSON.stringify(data.user));
         
+        setToken(data.token);
         setUser(data.user);
         toast.success(`Bienvenido, ${data.user.username}`);
         return true;
@@ -70,12 +73,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      const token = localStorage.getItem('auth_token');
-      if (token) {
+      const t = localStorage.getItem('auth_token');
+      if (t) {
         await fetch(`${API_URL}/auth/logout/`, {
           method: 'POST',
           headers: {
-            'Authorization': `Token ${token}`,
+            'Authorization': `Token ${t}`,
           },
         });
       }
@@ -84,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       localStorage.removeItem('auth_token');
       localStorage.removeItem('auth_user');
+      setToken(null);
       setUser(null);
       toast.success('Sesión cerrada');
     }
@@ -93,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
-        isAuthenticated: !!localStorage.getItem('auth_token'),
+        isAuthenticated: !!token,
         isLoading,
         login,
         logout,
